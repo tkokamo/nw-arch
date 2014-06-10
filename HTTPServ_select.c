@@ -10,7 +10,7 @@
 #include<sys/select.h>
 #include<sys/time.h>
 
-#define PORT 8080
+#define PORT 22636
 
 
 void exit_failure(unsigned char *msg);

@@ -8,7 +8,7 @@
 #include<netinet/in.h>
 #include<errno.h>
 
-#define PORT 8080
+#define PORT 22636
 
 void exit_failure(unsigned char *msg);
 void handle_client(int cli_fd, struct sockaddr_in cli_addr);

@@ -9,12 +9,11 @@
 #include<errno.h>
 #include<pthread.h>
 
-#define PORT 8080
-
+#define PORT 22636
 
 void exit_failure(unsigned char *msg);
 void * handle_client(void *args);
-
+	
 typedef struct thread_arg_t {
   int fd;
   struct sockaddr_in addr;
