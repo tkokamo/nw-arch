@@ -9,7 +9,6 @@
 #include<errno.h>
 
 #define PORT 8080
-#define DOCROOT "./"
 
 void exit_failure(unsigned char *msg);
 void handle_client(int cli_fd, struct sockaddr_in cli_addr);
@@ -50,10 +49,11 @@ int main(int argc, char **argv)
     if (pid == 0) { /*Child Process*/
       close(sock_fd);
       handle_client(cli_fd, cli_addr);
-      
+
       return 0;
     } else { /*Parent Process*/      
       while ((wait_pid = waitpid(-1, &status, WNOHANG)) > 0) ;
+      //while ((wait_pid = waitpid(-1, &status, 0)) > 0) ;
       
       if (wait_pid < 0 && errno != ECHILD) {
 	exit_failure("waitpid");
@@ -93,7 +93,7 @@ void handle_client(int cli_fd, struct sockaddr_in cli_addr)
   if (recv(cli_fd, recvBuf, 1024, 0) == -1) {
     exit_failure("recv");
   }
-  printf("%s\n", recvBuf);
+  printf("%s", recvBuf);
   
   if (send(cli_fd, HTML, strlen(HTML), 0) == -1) {
     exit_failure("send");

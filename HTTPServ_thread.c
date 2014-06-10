@@ -10,7 +10,7 @@
 #include<pthread.h>
 
 #define PORT 8080
-#define DOCROOT "./"
+
 
 void exit_failure(unsigned char *msg);
 void * handle_client(void *args);
@@ -49,11 +49,14 @@ int main(int argc, char **argv)
     if ((cli_fd = accept(sock_fd, (struct sockaddr *)&cli_addr, &len)) == -1)
       exit_failure("accept");
     
-    th_arg = (thread_arg *)malloc(sizeof(thread_arg));
+    if ((th_arg = (thread_arg *)malloc(sizeof(thread_arg))) == NULL) 
+      exit_failure("malloc");
+    
     th_arg->fd = cli_fd;
     th_arg->addr = cli_addr;
 
-    pthread_create(&thread, NULL, handle_client, (void *) th_arg);
+    if (pthread_create(&thread, NULL, handle_client, (void *) th_arg) != 0) 
+      exit_failure("pthread_create");
 
   }
 

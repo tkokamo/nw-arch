@@ -26,7 +26,6 @@ int main(int argc, char **argv)
   fd_set fds, orgfds;
   struct timeval waitval;
 
-
   if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
     exit_failure("socket");
 
@@ -107,7 +106,7 @@ void handle_client(int cli_fd)
   if (recv(cli_fd, recvBuf, 1024, 0) == -1) {
     exit_failure("recv");
   }
-  printf("%s\n", recvBuf);
+  printf("%s", recvBuf);
   
   if (send(cli_fd, HTML, strlen(HTML), 0) == -1) {
     exit_failure("send");
