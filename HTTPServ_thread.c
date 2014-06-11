@@ -123,7 +123,7 @@ unsigned char* request_check(unsigned char *buf)
 
 void * handle_client(void *args)
 {
-  //  pthread_detach(pthread_self());
+  pthread_detach(pthread_self());
   FILE *fp;
   int size;
   unsigned char recvBuf[1024];
