@@ -10,8 +10,12 @@
 
 #define PORT 22636
 
+static int code;
+
 void exit_failure(unsigned char *msg);
+unsigned char*  request_check(unsigned char *buf);
 void handle_client(int cli_fd, struct sockaddr_in cli_addr);
+
 
 int main(int argc, char **argv)
 {
@@ -73,31 +77,120 @@ void exit_failure(unsigned char *msg)
   exit(EXIT_FAILURE);
 }
 
+/*Header Check*/
+unsigned char* request_check(unsigned char *buf)
+{
+  unsigned char *p = buf, *path_point, *path;
+  unsigned char c;
+  unsigned int depth = 0;
+  unsigned int pathLen = 0;
+
+  /*allow only GET request*/
+  if (strncmp(p, "GET ", 4)) return NULL;
+  p += 4;
+  
+  while ((c = *(p++)) == ' ') {
+    ;
+  }
+  if (c != '/') return NULL;
+  path_point = p;
+  /*get path length and depth */
+  /*common*/
+  do {
+    if (c == '/') {
+      if (strncmp(p, "../", 3) == 0) 
+	depth--;
+      else 
+	depth++;
+    }
+    pathLen++;
+  } while ((c = *(p++)) != ' ' && c != '\n');
+  
+  if (*(p-2) == '/') return NULL;
+  /*forbidden refering to files under document root*/
+  if (depth <= 0) return NULL;
+
+  /*copy path*/
+  path = (unsigned char *)malloc(sizeof(unsigned char)*pathLen);
+  memset(path, 0, pathLen);
+  memcpy(path, path_point, pathLen-1);
+
+  /*HTTP check*/
+  while ((c = *(p++)) == ' ') {
+    ;
+  }
+
+
+  if (strncmp(p-1, "HTTP/1.1", 8)) return NULL;
+  return path;
+}
+
 void handle_client(int cli_fd, struct sockaddr_in cli_addr)
 {
+  FILE *fp;
+  int size;
   unsigned char recvBuf[1024];
-  char *HTML = 
-    "HTTP/1.0 200 OK\r\n"
+  unsigned char *path;
+  unsigned char *header_ok = 
+    "HTTP/1.1 200 OK\r\n"
     "Content-Type: text/html\r\n"
-    "\r\n"
+    "\r\n";
+  unsigned char *header_notfound = 
+    "HTTP/1.0 404 Not Found\r\n"
+    "Content-Type: text/html\r\n"
+    "\r\n";
+  unsigned char html_ok[1024];
+  unsigned char *html_notfound =
     "<html>"
     "<head>"
-    "<title>HTTP Test</title>"
+    "<title>Not Found</title>"
     "</head>"
     "<body>"
-    "<h1>It works</h1>"
+    "<h1>Not Found</h1>"
     "</body>"
     "</html>";
 
-  memset(recvBuf, 0, strlen(recvBuf));
+  memset(recvBuf, 0, 1024);
   if (recv(cli_fd, recvBuf, 1024, 0) == -1) {
     exit_failure("recv");
   }
   printf("%s", recvBuf);
   
-  if (send(cli_fd, HTML, strlen(HTML), 0) == -1) {
-    exit_failure("send");
-  }
+  /*validate request*/
+  if ((path = request_check(recvBuf)) == NULL) { /*Bad Request*/
+    if (send(cli_fd, header_notfound, strlen(header_notfound), 0) == -1) {
+      exit_failure("send header");
+    }
+    if (send(cli_fd, html_notfound, strlen(html_notfound), 0) == -1) {
+      exit_failure("send html");
+    }
+  } else { /*Good Request*/
+    if ((fp = fopen(path, "r")) == NULL && errno == ENOENT) { /*file not found*/
+
+      if (send(cli_fd, header_notfound, strlen(header_notfound), 0) == -1) {
+	exit_failure("send header");
+      }
+      if (send(cli_fd, html_notfound, strlen(html_notfound), 0) == -1) {
+	exit_failure("send html");
+      }
+    } else if (fp == NULL && errno != ENOENT) { /*could not open file*/
+      exit_failure("fopen");
+    } else { /*file exists*/
+      if (send(cli_fd, header_ok, strlen(header_ok), 0) == -1) {
+	exit_failure("send header");
+      }
+      while ((size = fread(html_ok, sizeof(unsigned char), 1024, fp)) != 0) {
+	if (send(cli_fd, html_ok, size, 0) == -1) {
+	  exit_failure("send html");
+	}
+      }
+      if (ferror(fp)) {
+	exit_failure("fread");
+      }
+      fclose(fp);
+    }
+
+  }  
 
   close(cli_fd);
 
